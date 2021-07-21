@@ -1,0 +1,20 @@
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - rapidsai
+dependencies:
+- cudnn=8.*
+- cudatoolkit=11.0
+- cugraph=21.06
+- cuml=21.06
+- pip
+- pip:
+    - tensorboard==2.4
+    - tensorflow-gpu==2.4
+    - torch==1.7.1+cu110 -f https://download.pytorch.org/whl/torch_stable.html
+    - torch-scatter -f https://pytorch-geometric.com/whl/torch-1.7.0+cu110.html 
+    - torch-sparse==0.6.9 -f https://pytorch-geometric.com/whl/torch-1.7.0+cu110.html 
+    - torch-cluster -f https://pytorch-geometric.com/whl/torch-1.7.0+cu110.html
+    - torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.7.0+cu110.html
+    - torch-geometric
