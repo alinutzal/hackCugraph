@@ -13,42 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #=============================================================================
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.20.1 FATAL_ERROR)
 
-project(dbscan_example VERSION 0.0.1 LANGUAGES CXX CUDA)
+project(CUGRAPH_TESTS VERSION 0.1.0 LANGUAGES CXX CUDA)
 
 #set(CUDA_ARCHITECTURES 75)
 
-find_package(CUDA)
-find_package(CUDAToolkit)
-#find_package(cuml)
-find_package(cugraph)
+# find_package(cuml)
+
 #find_package(rmm)
-include(cmake/CPM.cmake)
-CPMAddPackage(
-  NAME cuco
-  GITHUB_REPOSITORY NVIDIA/cuCollections
-  GIT_TAG dev
-  OPTIONS
-     "BUILD_TESTS OFF"
-     "BUILD_BENCHMARKS OFF"
-     "BUILD_EXAMPLES OFF"
-)
+# include(cmake/CPM.cmake)
+# CPMAddPackage(
+#   NAME cuco
+#   GITHUB_REPOSITORY NVIDIA/cuCollections
+#   GIT_TAG dev
+#   OPTIONS
+#      "BUILD_TESTS OFF"
+#      "BUILD_BENCHMARKS OFF"
+#      "BUILD_EXAMPLES OFF"
+# )
 
-set(CUGRAPH_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/libcugraph-21.06.00-cuda11.0_gf9ffd2de_0/include)
-set(CUML_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/libcuml-21.06.02-cuda11.0_g7dfbf8d9e_0/include)
-set(RMM_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/librmm-21.06.00-cuda11.0_gee432a0_0/include)
-set(SLOG_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/spdlog-1.8.5-h4bd325d_0/include)
+# set(CUGRAPH_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/libcugraph-21.06.00-cuda11.0_gf9ffd2de_0/include)
+# set(CUML_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/libcuml-21.06.02-cuda11.0_g7dfbf8d9e_0/include)
+# set(RMM_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/librmm-21.06.00-cuda11.0_gee432a0_0/include)
+# set(SLOG_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/spdlog-1.8.5-h4bd325d_0/include)
 
-add_executable(cugraph_example src/cugraphExample.cu)
-target_include_directories(cugraph_example 
-    PRIVATE 
-    ${CUB_INCLUDE_DIR}
-    ${CUCO_INCLUDE_DIR}
-    ${CUML_INCLUDE_DIRS} 
-    ${CUGRAPH_INCLUDE_DIRS} 
-    ${CUDA_INCLUDE_DIRS}  
-    ${RMM_INCLUDE_DIRS} 
-    ${SLOG_INCLUDE_DIRS})
-set_target_properties(cugraph_example PROPERTIES LINKER_LANGUAGE "CUDA")
-target_link_libraries(cugraph_example cuml++ cudart cublas cusolver cusparse cugraph cuco)
+add_subdirectory(src)
