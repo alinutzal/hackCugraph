@@ -68,7 +68,6 @@ option(CMAKE_CUDA_LINEINFO "Enable the -lineinfo option for nvcc (useful for cud
 # Set a default build type if none was specified
 rapids_cmake_build_type(Release)
 
-
 # Set the CUDA runtime CUDA targets will use
 rapids_cuda_init_runtime(USE_STATIC ${CUDA_STATIC_RUNTIME})
 
