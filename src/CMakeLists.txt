@@ -14,10 +14,10 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
 # PUBLIC
 #     cugraph
 # )
-if (NOT CONDA_ENV_DIR)
-    message(WARNING "Need CONDA_ENV_DIR to figure out dep., set to /opt/conda/envs/rapids")
-    set(CONDA_ENV_DIR /opt/conda/envs/rapids)
-endif ()
+# if (NOT CONDA_ENV_DIR)
+#     message(WARNING "Need CONDA_ENV_DIR to figure out dep., set to /opt/conda/envs/rapids")
+#     set(CONDA_ENV_DIR /opt/conda/envs/rapids)
+# endif ()
 
 add_executable(mmio_read mmio_read.cpp 
         mmio/mmio.c 
@@ -52,11 +52,15 @@ PUBLIC
 target_link_libraries(mmio_read
 PUBLIC
     # ${CONDA_ENV_DIR}/lib/libcugraph${CMAKE_SHARED_LIBRARY_SUFFIX}
+    $<BUILD_INTERFACE:conda_env>
     cugraph
-    cuco
+    cuco::cuco
     # NCCL::NCCL
 )
-
+# Add Conda env exist s, use it for link and include dirs
+# if(TARGET conda_env)
+#   target_link_libraries(mmio_read PUBLIC $<BUILD_INTERFACE:conda_env> )
+# endif()
 
 
 # add_executable(dbscan_test cugraphExample.cu)

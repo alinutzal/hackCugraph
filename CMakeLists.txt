@@ -13,6 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #=============================================================================
+
+
+# Taken from the example of intergration
+# https://github.com/rapidsai/rapids-cmake/blob/branch-21.06/example/CMakeLists.txt
+
 cmake_minimum_required(VERSION 3.20.1 FATAL_ERROR)
 include(FetchContent)
 FetchContent_Declare(
@@ -22,16 +27,17 @@ FetchContent_Declare(
   )
 FetchContent_MakeAvailable(rapids-cmake)
 
-include(cmake/CPM.cmake)
+# include(cmake/CPM.cmake)
 include(rapids-cpm)
 include(rapids-cmake)
 include(rapids-cuda)
-# include(rapids-export)
+include(rapids-export)
 include(rapids-find)
 
 rapids_cuda_init_architectures(CUGRAPH_TESTS)
 
-project(CUGRAPH_TESTS VERSION 0.1.0 LANGUAGES CXX CUDA)
+project(CUGRAPH_TESTS VERSION 21.06 LANGUAGES C CXX CUDA)
+message(STATUS "CUGRAPH_TESTS: CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
 
 # Remove the following archs from CMAKE_CUDA_ARCHITECTURES that
 # cuhornet currently doesn't support
@@ -51,18 +57,20 @@ endforeach()
 list(POP_BACK usable_arch_values latest_arch)
 list(TRANSFORM usable_arch_values APPEND "-real")
 list(APPEND usable_arch_values ${latest_arch})
-
 set(CMAKE_CUDA_ARCHITECTURES ${usable_arch_values})
 
-CPMAddPackage(
-  NAME cuco
-  GITHUB_REPOSITORY NVIDIA/cuCollections
-  GIT_TAG 0b672bbde7c85a79df4d7ca5f82e15e5b4a57700
-  OPTIONS
-     "BUILD_TESTS OFF"
-     "BUILD_BENCHMARKS OFF"
-     "BUILD_EXAMPLES OFF"
-)
+# CPMAddPackage(
+#   NAME cuco
+#   GITHUB_REPOSITORY NVIDIA/cuCollections
+#   GIT_TAG 0b672bbde7c85a79df4d7ca5f82e15e5b4a57700
+#   OPTIONS
+#      "BUILD_TESTS OFF"
+#      "BUILD_BENCHMARKS OFF"
+#      "BUILD_EXAMPLES OFF"
+# )
+
+option(CUDA_STATIC_RUNTIME "Use CUDA static runtime" OFF)
+option(CMAKE_CUDA_LINEINFO "Enable the -lineinfo option for nvcc (useful for cuda-memcheck / profiler" OFF)
 
 ###################################################################################################
 # - build type ------------------------------------------------------------------------------------
@@ -70,15 +78,44 @@ CPMAddPackage(
 # Set a default build type if none was specified
 rapids_cmake_build_type(Release)
 
-option(CMAKE_CUDA_LINEINFO "Enable the -lineinfo option for nvcc (useful for cuda-memcheck / profiler" OFF)
+
+# Set the CUDA runtime CUDA targets will use
+rapids_cuda_init_runtime(USE_STATIC ${CUDA_STATIC_RUNTIME})
+
+# conda environment
+rapids_cmake_support_conda_env( conda_env MODIFY_PREFIX_PATH )
 
 ###################################################################################################
 # - compiler options ------------------------------------------------------------------------------
 
+# Find the CUDAToolkit
 rapids_find_package(CUDAToolkit REQUIRED
-    BUILD_EXPORT_SET    cugraph-exports
-    INSTALL_EXPORT_SET  cugraph-exports
-    )
+                    BUILD_EXPORT_SET cugraphTest-targets
+                    INSTALL_EXPORT_SET cugraphTest-targets
+                    )
+
+# find Threads (needed by cudftestutil)
+rapids_find_package(Threads REQUIRED
+                    BUILD_EXPORT_SET cugraphTest-targets
+                    INSTALL_EXPORT_SET cugraphTest-targets
+                    )
+
+###################################################################################################
+# - find blas -------------------------------------------------------------------------------------
+
+if(NOT DEFINED BLAS_LIBRARIES)
+rapids_find_package(BLAS REQUIRED 
+                    BUILD_EXPORT_SET cugraphTest-targets
+                    INSTALL_EXPORT_SET cugraphTest-targets
+              )
+else()
+  message(STATUS "Manually setting BLAS to ${BLAS_LIBRARIES}")
+endif()
+
+###################################################################################################
+# - find CPM based dependencies  ------------------------------------------------------------------
+rapids_cpm_init()
+include(cmake/get_cuco.cmake)
 
 set(CUGRAPH_CXX_FLAGS "")
 set(CUGRAPH_CUDA_FLAGS "")
@@ -107,22 +144,6 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
     list(APPEND CUGRAPH_CUDA_FLAGS -G -Xcompiler=-rdynamic)
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
-
-###################################################################################################
-# - find blas -------------------------------------------------------------------------------------
-
-if(NOT DEFINED BLAS_LIBRARIES)
-  find_package( BLAS REQUIRED )
-else()
-  message(STATUS "Manually setting BLAS to ${BLAS_LIBRARIES}")
-endif()
-
-###################################################################################################
-# - find CPM based dependencies  ------------------------------------------------------------------
-
-
-rapids_cpm_init()
-include(cmake/get_cuco.cmake)
 
 # include(cmake/get_raft.cmake)
 

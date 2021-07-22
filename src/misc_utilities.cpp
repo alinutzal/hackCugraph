@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <utilities/test_utilities.hpp>
+#include <test_utilities.hpp>
 
 namespace cugraph {
 namespace test {
