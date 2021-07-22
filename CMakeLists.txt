@@ -13,42 +13,126 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #=============================================================================
-cmake_minimum_required(VERSION 3.20)
 
-project(dbscan_example VERSION 0.0.1 LANGUAGES CXX CUDA)
 
-#set(CUDA_ARCHITECTURES 75)
+# Taken from the example of intergration
+# https://github.com/rapidsai/rapids-cmake/blob/branch-21.06/example/CMakeLists.txt
 
-find_package(CUDA)
-find_package(CUDAToolkit)
-#find_package(cuml)
-find_package(cugraph)
-#find_package(rmm)
-include(cmake/CPM.cmake)
-CPMAddPackage(
-  NAME cuco
-  GITHUB_REPOSITORY NVIDIA/cuCollections
-  GIT_TAG dev
-  OPTIONS
-     "BUILD_TESTS OFF"
-     "BUILD_BENCHMARKS OFF"
-     "BUILD_EXAMPLES OFF"
-)
+cmake_minimum_required(VERSION 3.20.1 FATAL_ERROR)
+include(FetchContent)
+FetchContent_Declare(
+  rapids-cmake
+  GIT_REPOSITORY https://github.com/rapidsai/rapids-cmake.git
+  GIT_TAG        origin/branch-21.06
+  )
+FetchContent_MakeAvailable(rapids-cmake)
 
-set(CUGRAPH_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/libcugraph-21.06.00-cuda11.0_gf9ffd2de_0/include)
-set(CUML_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/libcuml-21.06.02-cuda11.0_g7dfbf8d9e_0/include)
-set(RMM_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/librmm-21.06.00-cuda11.0_gee432a0_0/include)
-set(SLOG_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/spdlog-1.8.5-h4bd325d_0/include)
+include(rapids-cpm)
+include(rapids-cmake)
+include(rapids-cuda)
+include(rapids-export)
+include(rapids-find)
 
-add_executable(cugraph_example src/cugraphExample.cu)
-target_include_directories(cugraph_example 
-    PRIVATE 
-    ${CUB_INCLUDE_DIR}
-    ${CUCO_INCLUDE_DIR}
-    ${CUML_INCLUDE_DIRS} 
-    ${CUGRAPH_INCLUDE_DIRS} 
-    ${CUDA_INCLUDE_DIRS}  
-    ${RMM_INCLUDE_DIRS} 
-    ${SLOG_INCLUDE_DIRS})
-set_target_properties(cugraph_example PROPERTIES LINKER_LANGUAGE "CUDA")
-target_link_libraries(cugraph_example cuml++ cudart cublas cusolver cusparse cugraph cuco)
+rapids_cuda_init_architectures(CUGRAPH_TESTS)
+
+project(CUGRAPH_TESTS VERSION 21.06 LANGUAGES C CXX CUDA)
+message(STATUS "CUGRAPH_TESTS: CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
+
+# Remove the following archs from CMAKE_CUDA_ARCHITECTURES that
+# cuhornet currently doesn't support
+#
+# < 60
+# >= 86
+set(supported_archs "60" "62" "70" "72" "75" "80")
+foreach( arch IN LISTS CMAKE_CUDA_ARCHITECTURES)
+    string(REPLACE "-real" "" arch ${arch})
+    if( arch IN_LIST supported_archs )
+        list(APPEND usable_arch_values ${arch})
+    endif()
+endforeach()
+# Make sure everything but the 'newest' arch
+# is marked as `-real` so we only generate PTX for
+# arch > 80
+list(POP_BACK usable_arch_values latest_arch)
+list(TRANSFORM usable_arch_values APPEND "-real")
+list(APPEND usable_arch_values ${latest_arch})
+set(CMAKE_CUDA_ARCHITECTURES ${usable_arch_values})
+
+
+option(CUDA_STATIC_RUNTIME "Use CUDA static runtime" OFF)
+option(CMAKE_CUDA_LINEINFO "Enable the -lineinfo option for nvcc (useful for cuda-memcheck / profiler" OFF)
+
+###################################################################################################
+# - build type ------------------------------------------------------------------------------------
+
+# Set a default build type if none was specified
+rapids_cmake_build_type(Release)
+
+# Set the CUDA runtime CUDA targets will use
+rapids_cuda_init_runtime(USE_STATIC ${CUDA_STATIC_RUNTIME})
+
+# conda environment
+rapids_cmake_support_conda_env( conda_env MODIFY_PREFIX_PATH )
+
+###################################################################################################
+# - compiler options ------------------------------------------------------------------------------
+
+# Find the CUDAToolkit
+rapids_find_package(CUDAToolkit REQUIRED
+                    BUILD_EXPORT_SET cugraphTest-targets
+                    INSTALL_EXPORT_SET cugraphTest-targets
+                    )
+
+# find Threads (needed by cudftestutil)
+rapids_find_package(Threads REQUIRED
+                    BUILD_EXPORT_SET cugraphTest-targets
+                    INSTALL_EXPORT_SET cugraphTest-targets
+                    )
+
+###################################################################################################
+# - find blas -------------------------------------------------------------------------------------
+
+if(NOT DEFINED BLAS_LIBRARIES)
+rapids_find_package(BLAS REQUIRED 
+                    BUILD_EXPORT_SET cugraphTest-targets
+                    INSTALL_EXPORT_SET cugraphTest-targets
+              )
+else()
+  message(STATUS "Manually setting BLAS to ${BLAS_LIBRARIES}")
+endif()
+
+###################################################################################################
+# - find CPM based dependencies  ------------------------------------------------------------------
+rapids_cpm_init()
+include(cmake/get_cuco.cmake)
+include(cmake/get_nccl.cmake)
+
+set(CUGRAPH_CXX_FLAGS "")
+set(CUGRAPH_CUDA_FLAGS "")
+
+if(CMAKE_COMPILER_IS_GNUCXX)
+    list(APPEND CUGRAPH_CXX_FLAGS -Werror -Wno-error=deprecated-declarations)
+endif(CMAKE_COMPILER_IS_GNUCXX)
+
+
+message("-- Building for GPU_ARCHS = ${CMAKE_CUDA_ARCHITECTURES}")
+
+list(APPEND CUGRAPH_CUDA_FLAGS --expt-extended-lambda --expt-relaxed-constexpr)
+list(APPEND CUGRAPH_CUDA_FLAGS -Werror=cross-execution-space-call -Wno-deprecated-declarations -Xptxas=--disable-warnings)
+list(APPEND CUGRAPH_CUDA_FLAGS -Xcompiler=-Wall,-Wno-error=sign-compare,-Wno-error=unused-but-set-variable)
+list(APPEND CUGRAPH_CUDA_FLAGS -Xfatbin=-compress-all)
+
+# Option to enable line info in CUDA device compilation to allow introspection when profiling /
+# memchecking
+if (CMAKE_CUDA_LINEINFO)
+    list(APPEND CUGRAPH_CUDA_FLAGS -lineinfo)
+endif(CMAKE_CUDA_LINEINFO)
+
+# Debug options
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+    message(STATUS "Building with debugging flags")
+    list(APPEND CUGRAPH_CUDA_FLAGS -G -Xcompiler=-rdynamic)
+endif(CMAKE_BUILD_TYPE MATCHES Debug)
+
+
+add_subdirectory(src)
