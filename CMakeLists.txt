@@ -105,6 +105,7 @@ endif()
 # - find CPM based dependencies  ------------------------------------------------------------------
 rapids_cpm_init()
 include(cmake/get_cuco.cmake)
+include(cmake/get_nccl.cmake)
 
 set(CUGRAPH_CXX_FLAGS "")
 set(CUGRAPH_CUDA_FLAGS "")
