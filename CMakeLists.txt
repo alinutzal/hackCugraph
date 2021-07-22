@@ -27,7 +27,6 @@ FetchContent_Declare(
   )
 FetchContent_MakeAvailable(rapids-cmake)
 
-# include(cmake/CPM.cmake)
 include(rapids-cpm)
 include(rapids-cmake)
 include(rapids-cuda)
@@ -59,15 +58,6 @@ list(TRANSFORM usable_arch_values APPEND "-real")
 list(APPEND usable_arch_values ${latest_arch})
 set(CMAKE_CUDA_ARCHITECTURES ${usable_arch_values})
 
-# CPMAddPackage(
-#   NAME cuco
-#   GITHUB_REPOSITORY NVIDIA/cuCollections
-#   GIT_TAG 0b672bbde7c85a79df4d7ca5f82e15e5b4a57700
-#   OPTIONS
-#      "BUILD_TESTS OFF"
-#      "BUILD_BENCHMARKS OFF"
-#      "BUILD_EXAMPLES OFF"
-# )
 
 option(CUDA_STATIC_RUNTIME "Use CUDA static runtime" OFF)
 option(CMAKE_CUDA_LINEINFO "Enable the -lineinfo option for nvcc (useful for cuda-memcheck / profiler" OFF)
@@ -144,12 +134,5 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
     list(APPEND CUGRAPH_CUDA_FLAGS -G -Xcompiler=-rdynamic)
 endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
-
-# include(cmake/get_raft.cmake)
-
-# set(CUGRAPH_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/libcugraph-21.06.00-cuda11.0_gf9ffd2de_0/include)
-# set(CUML_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/libcuml-21.06.02-cuda11.0_g7dfbf8d9e_0/include)
-# set(RMM_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/librmm-21.06.00-cuda11.0_gee432a0_0/include)
-# set(SLOG_INCLUDE_DIRS /home/alinal/miniconda3/pkgs/spdlog-1.8.5-h4bd325d_0/include)
 
 add_subdirectory(src)
