@@ -19,6 +19,12 @@
 # https://github.com/rapidsai/rapids-cmake/blob/branch-21.06/example/CMakeLists.txt
 
 cmake_minimum_required(VERSION 3.20.1 FATAL_ERROR)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+
 include(FetchContent)
 FetchContent_Declare(
   rapids-cmake
